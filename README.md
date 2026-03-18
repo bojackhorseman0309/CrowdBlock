@@ -105,7 +105,7 @@ Estructura base de campaña:
 Estructura de aportes:
 - `contributions[campaignId][donor] => amount`
 
-## 60. Estructura base del repositorio inicial
+## 6. Estructura base del repositorio inicial
 
 ```txt
 CrowdBlock/
