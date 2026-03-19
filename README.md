@@ -73,6 +73,8 @@ infraestructura de nube sin comprometer la lógica crítica, que permanece en el
 
 ## 4. Componentes del sistema
 
+![Diagrama de componentes de la DApp CrowdBlock](docs/img/crowdBlockComponents.png)
+
 ### Componente 1: Usuario (Creator/Donor)
 - Interactúa con la DApp.
 - Autoriza operaciones con wallet.
