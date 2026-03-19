@@ -17,8 +17,13 @@ El objetivo es demostrar transparencia, trazabilidad e inmutabilidad en el proce
 
 ## 2. Arquitectura de la solución
 
+![Diagrama de arquitectura de la DApp CrowdBlock](docs/img/crowdBlockArchitecture.png)
 
-La solución usa una arquitectura de DApp con un solo contrato inteligente que administra múltiples campañas.
+La arquitectura de CrowdBlock se basa en un modelo de DApp por capas, donde el usuario interactúa desde el navegador con un frontend web que actúa como cliente de la aplicación. Para operaciones de
+escritura en blockchain, el frontend solicita la firma de la transacción en MetaMask, y una vez aprobada, esta se envía mediante un proveedor RPC hacia la red EVM (Hardhat en desarrollo local o
+Polygon Amoy para su despliegue de prueba), donde el smart contract ejecuta las reglas de negocio y actualiza el estado on-chain. Para operaciones de lectura, el frontend consulta estado y eventos directamente por RPC
+sin requerir firma. Esta separación entre lectura y escritura mejora la claridad del flujo, mantiene la seguridad en la custodia de claves y permite desplegar el frontend como aplicación estática en
+infraestructura de nube sin comprometer la lógica crítica, que permanece en el contrato inteligente.
 
 ### Capas
 - **Frontend Web (DApp):** interfaz de usuario para crear campañas, donar, retirar y pedir reembolso.
@@ -75,7 +80,7 @@ La solución usa una arquitectura de DApp con un solo contrato inteligente que a
 ### Componente 2: Frontend DApp
 - Muestra campañas y estados.
 - Prepara llamadas al contrato y lectura de eventos.
-- No custodia fondos en si.
+- No custodia fondos en sí.
 
 ### Componente 3: MetaMask
 - Gestiona cuentas y llaves.
