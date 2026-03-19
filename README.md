@@ -33,6 +33,12 @@ infraestructura de nube sin comprometer la lógica crítica, que permanece en el
 
 ## 3. Flujo de transacciones
 
+![Diagrama de flujo de transacciones de CrowdBlock](docs/img/transactionDiagram.png)
+
+El diagrama de flujo de transacciones de CrowdBlock representa, en carriles separados, la interacción entre Usuario, Frontend, MetaMask, RPC, Blockchain y Smart Contract. Se detallan los cuatro
+flujos principales del sistema: creación de campaña, donación, retiro de fondos por meta alcanzada y reembolso por meta no cumplida. En cada flujo se observa el camino de éxito (firma, propagación,
+ejecución y confirmación on-chain) y el camino de error cuando la firma es rechazada o una validación del contrato falla (revert). Además, se incluye el flujo de lectura de estado y eventos, el cual
+no requiere firma del wallet.
 
 ### Flujo A: Crear campaña
 1. La persona creadora completa formulario (`title`, `goal`, `deadline`).
@@ -75,7 +81,7 @@ infraestructura de nube sin comprometer la lógica crítica, que permanece en el
 
 ![Diagrama de componentes de la DApp CrowdBlock](docs/img/crowdBlockComponents.png)
 
-### Componente 1: Usuario (Creator/Donor)
+### Componente 1: Usuario (Creador/Donador)
 - Interactúa con la DApp.
 - Autoriza operaciones con wallet.
 
