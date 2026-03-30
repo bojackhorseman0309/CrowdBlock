@@ -1,0 +1,108 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
+
+contract Crowdfunding {
+    uint256 public constant MAX_CAMPAIGN_DURATION = 365 days;
+
+    struct Campaign {
+        address creator;
+        string title;
+        uint256 goal;
+        uint256 deadline;
+        uint256 amountRaised;
+        bool withdrawn;
+        bool exists;
+    }
+
+    uint256 public campaignCount;
+
+    mapping(uint256 => Campaign) public campaigns;
+    mapping(uint256 => mapping(address => uint256)) public contributions;
+
+    event CampaignCreated(uint256 indexed campaignId, address indexed creator, uint256 goal, uint256 deadline, string title);
+    event DonationReceived(uint256 indexed campaignId, address indexed donor, uint256 amount);
+    event FundsWithdrawn(uint256 indexed campaignId, address indexed creator, uint256 amount);
+    event RefundIssued(uint256 indexed campaignId, address indexed donor, uint256 amount);
+
+    error InvalidGoal();
+    error InvalidDeadline();
+    error CampaignDurationTooLong();
+    error CampaignNotFound();
+    error CampaignEnded();
+    error CampaignStillActive();
+    error DonationMustBeGreaterThanZero();
+    error GoalNotReached();
+    error GoalAlreadyReached();
+    error NotCampaignCreator();
+    error AlreadyWithdrawn();
+    error NoContributionToRefund();
+    error TransferFailed();
+
+    function createCampaign(string calldata title, uint256 goal, uint256 deadline) external returns (uint256 campaignId) {
+        if (goal == 0) revert InvalidGoal();
+        if (deadline <= block.timestamp) revert InvalidDeadline();
+        if (deadline > block.timestamp + MAX_CAMPAIGN_DURATION) revert CampaignDurationTooLong();
+
+        campaignId = campaignCount;
+        campaignCount += 1;
+
+        campaigns[campaignId] = Campaign({
+            creator: msg.sender,
+            title: title,
+            goal: goal,
+            deadline: deadline,
+            amountRaised: 0,
+            withdrawn: false,
+            exists: true
+        });
+
+        emit CampaignCreated(campaignId, msg.sender, goal, deadline, title);
+    }
+
+    function donate(uint256 campaignId) external payable {
+        Campaign storage campaign = _getCampaign(campaignId);
+        if (block.timestamp >= campaign.deadline) revert CampaignEnded();
+        if (msg.value == 0) revert DonationMustBeGreaterThanZero();
+
+        campaign.amountRaised += msg.value;
+        contributions[campaignId][msg.sender] += msg.value;
+
+        emit DonationReceived(campaignId, msg.sender, msg.value);
+    }
+
+    function withdraw(uint256 campaignId) external {
+        Campaign storage campaign = _getCampaign(campaignId);
+        if (msg.sender != campaign.creator) revert NotCampaignCreator();
+        if (campaign.amountRaised < campaign.goal) revert GoalNotReached();
+        if (campaign.withdrawn) revert AlreadyWithdrawn();
+
+        campaign.withdrawn = true;
+        uint256 amount = campaign.amountRaised;
+
+        (bool success, ) = payable(campaign.creator).call{value: amount}("");
+        if (!success) revert TransferFailed();
+
+        emit FundsWithdrawn(campaignId, campaign.creator, amount);
+    }
+
+    function refund(uint256 campaignId) external {
+        Campaign storage campaign = _getCampaign(campaignId);
+        if (block.timestamp < campaign.deadline) revert CampaignStillActive();
+        if (campaign.amountRaised >= campaign.goal) revert GoalAlreadyReached();
+
+        uint256 amount = contributions[campaignId][msg.sender];
+        if (amount == 0) revert NoContributionToRefund();
+
+        contributions[campaignId][msg.sender] = 0;
+
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        if (!success) revert TransferFailed();
+
+        emit RefundIssued(campaignId, msg.sender, amount);
+    }
+
+    function _getCampaign(uint256 campaignId) internal view returns (Campaign storage campaign) {
+        campaign = campaigns[campaignId];
+        if (!campaign.exists) revert CampaignNotFound();
+    }
+}

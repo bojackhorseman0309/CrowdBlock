@@ -8,14 +8,14 @@ Plataforma descentralizada de crowdfunding para crear campañas, recibir aportes
 - Meta de recaudación
 - Fecha límite
 
-Las personas donantes envían fondos por medio de una criptomoneda directamente al smart contract.  
+Las personas donantes envían fondos en **token nativo** directamente al smart contract (**ETH** en Hardhat local y **POL** en Polygon Amoy).  
 El contrato aplica reglas automáticas:
 - La persona creadora puede retirar fondos solo si la campaña alcanzó la meta y no se retiró antes.
 - Si la campaña finaliza sin alcanzar la meta, cada donante puede solicitar el reembolso de su aporte.
 
 El objetivo es ofrecer una alternativa de financiamiento colectivo para usuarios reales, con transparencia, trazabilidad e inmutabilidad, sin intermediarios que custodien los fondos (a diferencia de plataformas tradicionales).
 
-Para simplificar la primera versión, los aportes pueden manejarse en **POL (token nativo de Polygon)** y dejar como extensión futura el soporte de tokens **ERC-20**.
+Para simplificar la primera versión, los aportes se manejan con token nativo de la red (ETH en local, POL en Amoy) y se deja como extensión futura el soporte de tokens **ERC-20**.
 
 ## 2. Arquitectura de la solución
 
@@ -121,22 +121,60 @@ Estructura base de campaña:
 Estructura de aportes:
 - `contributions[campaignId][donor] => amount`
 
-## 6. Scripts de prueba funcional propuestos (.ts)
+## 6. Desarrollo de Smart Contracts (Solidity + Hardhat + Red local)
 
-- `scripts/testCreateCampaign.ts`: crea campaña y valida campos iniciales.
-- `scripts/testDonate.ts`: ejecuta donaciones y valida acumulado.
-- `scripts/testWithdraw.ts`: valida retiro exitoso y fallos por permisos/estado.
-- `scripts/testRefund.ts`: valida reembolso cuando no se alcanza meta y vence plazo.
-
-## 7. Estructura base del repositorio inicial
+### Estructura implementada para Parte 2
 
 ```txt
 CrowdBlock/
   contracts/
     Crowdfunding.sol
+  test/
+    Crowdfunding.test.ts
   scripts/
-    deploy.ts
+    deploy-local.ts
+    demo-local.ts
+  hardhat.config.ts
+  package.json
+  tsconfig.json
+  .env.example
   web/
     (frontend de la DApp)...
   README.md
+```
+
+### Utilización
+
+Requisitos:
+- Node.js 22+
+- npm
+
+Instalación de dependencias:
+```bash
+npm install
+```
+
+Compilar contrato:
+```bash
+npm run compile
+```
+
+Ejecutar pruebas:
+```bash
+npm run test
+```
+
+Levantar blockchain local Hardhat:
+```bash
+npm run node
+```
+
+En otra terminal, desplegar contrato en red local:
+```bash
+npm run deploy:local
+```
+
+En otra terminal, ejecutar demo local (crear campaña, donar, retirar):
+```bash
+npm run demo:local
 ```
