@@ -178,3 +178,17 @@ En otra terminal, ejecutar demo local (crear campaña, donar, retirar):
 ```bash
 npm run demo:local
 ```
+
+Output de demo local:
+
+```
+> crowdblock@1.0.0 demo:local
+> hardhat run scripts/demo-local.ts --network localhost
+
+
+Contract: 0xdfssfwef
+Creator: 0xwefwefwef
+Donor: 0xwefwefwef
+Raised: 1.0 token nativo
+Withdrawn: true
+```
