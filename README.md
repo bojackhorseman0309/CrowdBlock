@@ -149,6 +149,11 @@ Requisitos:
 - Node.js 22+
 - npm
 
+Secrets:
+- Seguir ejemplo de .env.example
+- AMOY_RPC_URL: URL RPC para Polygon Amoy Testnet (si se va a desplegar en Amoy)
+- DEPLOYER_PRIVATE_KEY: Clave privada de cuenta para desplegar
+
 Instalación de dependencias:
 ```bash
 npm install
