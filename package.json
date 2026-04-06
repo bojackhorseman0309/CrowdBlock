@@ -3,13 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "yarn@1.22.22",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
     "node": "hardhat node",
+    "hardhat-node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy-local.ts --network localhost",
     "demo:local": "hardhat run scripts/demo-local.ts --network localhost",
-    "clean": "hardhat clean"
+    "clean": "hardhat clean",
+    "amoy:crowdfunding:deploy": "hardhat run scripts/deploy-crowdfunding.js --network amoy",
+    "ui:crowdfunding": "node scripts/serve-crowdfunding-ui.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.6",
@@ -22,7 +26,7 @@
     "chai": "^6.2.2",
     "dotenv": "^17.3.1",
     "ethers": "^6.16.0",
-    "hardhat": "^3.2.0",
+    "hardhat": "^3.3.0",
     "mocha": "^11.7.5",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"

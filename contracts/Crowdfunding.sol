@@ -18,6 +18,8 @@ contract Crowdfunding {
 
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => mapping(address => uint256)) public contributions;
+    mapping(uint256 => address[]) private campaignDonators;
+    mapping(uint256 => mapping(address => bool)) private hasDonated;
 
     event CampaignCreated(uint256 indexed campaignId, address indexed creator, uint256 goal, uint256 deadline, string title);
     event DonationReceived(uint256 indexed campaignId, address indexed donor, uint256 amount);
@@ -64,6 +66,11 @@ contract Crowdfunding {
         if (block.timestamp >= campaign.deadline) revert CampaignEnded();
         if (msg.value == 0) revert DonationMustBeGreaterThanZero();
 
+        if (!hasDonated[campaignId][msg.sender]) {
+            campaignDonators[campaignId].push(msg.sender);
+            hasDonated[campaignId][msg.sender] = true;
+        }
+
         campaign.amountRaised += msg.value;
         contributions[campaignId][msg.sender] += msg.value;
 
@@ -104,5 +111,18 @@ contract Crowdfunding {
     function _getCampaign(uint256 campaignId) internal view returns (Campaign storage campaign) {
         campaign = campaigns[campaignId];
         if (!campaign.exists) revert CampaignNotFound();
+    }
+
+    function getDonators(uint256 _campaignId) public view returns (address[] memory) {
+        _getCampaign(_campaignId); // validate campaign exists
+        return campaignDonators[_campaignId];
+    }
+
+    function getCampaigns() public view returns (Campaign[] memory) {
+        Campaign[] memory allCampaigns = new Campaign[](campaignCount); // create a new array of length campaignCount
+        for (uint256 i = 0; i < campaignCount; i++) {
+            allCampaigns[i] = campaigns[i];
+        }
+        return allCampaigns;
     }
 }

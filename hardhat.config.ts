@@ -7,6 +7,17 @@ import dotenv from "dotenv";
 
 dotenv.config({ quiet: true });
 
+function resolveAccounts(privateKey: string) {
+  if (!privateKey) {
+    return [];
+  }
+
+  const normalized = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
+  const isValidKey = /^0x[a-fA-F0-9]{64}$/.test(normalized);
+
+  return isValidKey ? [normalized] : [];
+}
+
 const amoyRpcUrl = process.env.AMOY_RPC_URL || "";
 const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY || "";
 
@@ -15,16 +26,20 @@ const config = defineConfig({
   solidity: "0.8.26",
   networks: {
     hardhat: {
-      type: "edr-simulated"
+      type: "edr-simulated",
+      chainId: 31337
     },
     localhost: {
       type: "http",
-      url: "http://127.0.0.1:8545"
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
+      gasPrice: 25000000000,
+      gas: 8000000,
     },
     amoy: {
       type: "http",
-      url: amoyRpcUrl,
-      accounts: deployerPrivateKey ? [deployerPrivateKey] : []
+      url: amoyRpcUrl || "",
+      accounts: resolveAccounts(deployerPrivateKey)
     }
   }
 });

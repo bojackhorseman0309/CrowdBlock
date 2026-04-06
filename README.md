@@ -197,3 +197,23 @@ Donor: 0xwefwefwef
 Raised: 1.0 token nativo
 Withdrawn: true
 ```
+
+Para el uso del UI usar los siguientes comandos:
+>Levantar blockchain local
+```
+yarn run node 
+
+o
+
+yarn hardhat-node
+```
+>En otra terminal, desplegar contrato
+```
+yarn deploy:local
+```
+Importante: Si se crear un contrato nuevo por favor cambiar la constante CONTRACT_ADDRESSES en app.js
+
+>Finalmente para correr el UI Server
+```
+yarn ui:crowdfunding
+```
