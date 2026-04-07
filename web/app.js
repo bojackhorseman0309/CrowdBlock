@@ -590,7 +590,7 @@ async function renderCampaigns() {
       const isCreator = creatorAddress === accountAddress;
       const isEnded = now >= Number(campaign.deadline);
       const goalReached = campaign.amountRaised >= campaign.goal;
-      const canWithdraw = isCreator && goalReached && !campaign.withdrawn;
+      const canWithdraw = isCreator && isEnded && goalReached && !campaign.withdrawn;
       const canRefund = isEnded && !goalReached && contributionAmounts[i] > 0n;
 
       const card = document.createElement("div");
