@@ -98,9 +98,26 @@ function extractErrorText(error) {
   return parts.join(" | ");
 }
 
+function extractErrorSelector(error) {
+  const candidates = [
+    error?.data,
+    error?.error?.data,
+    error?.info?.error?.data,
+    error?.info?.payload?.error?.data
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === "string" && /^0x[0-9a-fA-F]{8}/.test(value)) {
+      return value.slice(0, 10).toLowerCase();
+    }
+  }
+
+  return null;
+}
+
 function getFriendlyError(error, fallback) {
   const raw = extractErrorText(error);
-  if (!raw) return fallback;
+  const selector = extractErrorSelector(error);
 
   const map = [
     ["NotOwner", "Solo el owner puede ejecutar esta acción."],
@@ -116,9 +133,36 @@ function getFriendlyError(error, fallback) {
     ["InvalidGoal", "Meta inválida."]
   ];
 
-  for (const [token, message] of map) {
-    if (raw.includes(token)) return message;
+  if (raw) {
+    for (const [token, message] of map) {
+      if (raw.includes(token)) return message;
+    }
   }
+
+  const selectorMap = new Map([
+    ["0x30cd7471", "Solo el owner puede ejecutar esta acción."],
+    ["0xe681a15c", "Solo el creador de la campaña puede retirar fondos."],
+    ["0x9cb6acb6", "La campaña sigue activa. Aún no se cumple el deadline."],
+    ["0x78c754c9", "No se puede retirar: la meta no fue alcanzada."],
+    ["0x8cb8251e", "No se puede reembolsar: la meta ya fue alcanzada."],
+    ["0xc696cfea", "No tienes aportes para reembolsar en esta campaña."],
+    ["0x6507689f", "Los fondos de esta campaña ya fueron retirados."],
+    ["0x553ae054", "No se puede donar: la campaña ya finalizó."],
+    ["0x6ff36e16", "La campaña no existe."],
+    ["0x769d11e4", "Fecha límite inválida."],
+    ["0x9b60eb4d", "Meta inválida."],
+    ["0x4368db74", "El monto de donación debe ser mayor a 0."],
+    ["0x49e27cff", "Dirección de owner inválida."],
+    ["0x9c8d2cd2", "Dirección destino inválida."],
+    ["0x5162a56f", "No hay fondos recuperables suficientes para esa operación."],
+    ["0x90b8ec18", "La transferencia de fondos falló en la red."]
+  ]);
+
+  if (selector && selectorMap.has(selector)) {
+    return selectorMap.get(selector);
+  }
+
+  if (!raw) return fallback;
 
   if (raw.includes("missing revert data") || raw.includes("CALL_EXCEPTION")) {
     return "La transacción fue rechazada por una validación del contrato. Revisa permisos, deadline y condiciones de la campaña.";
