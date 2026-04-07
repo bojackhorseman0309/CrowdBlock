@@ -6,7 +6,7 @@ describe("Crowdfunding", function () {
     const { ethers } = connection;
     const [creator, donor, other] = await ethers.getSigners();
     const Factory: any = await ethers.getContractFactory("Crowdfunding");
-    const crowdfunding = await Factory.deploy();
+    const crowdfunding = await Factory.deploy(creator.address);
     await crowdfunding.waitForDeployment();
 
     return { crowdfunding, creator, donor, other };
@@ -160,6 +160,7 @@ describe("Crowdfunding", function () {
 
     await crowdfunding.connect(creator).createCampaign("Camera", goal, deadline);
     await crowdfunding.connect(donor).donate(0, { value: goal });
+    await increaseTime(connection, 4000);
 
     await expect(crowdfunding.connect(creator).withdraw(0))
       .to.emit(crowdfunding, "FundsWithdrawn")
@@ -179,8 +180,23 @@ describe("Crowdfunding", function () {
 
     await crowdfunding.connect(creator).createCampaign("Bike", goal, deadline);
     await crowdfunding.connect(donor).donate(0, { value: goal });
+    await increaseTime(connection, 4000);
 
     await expect(crowdfunding.connect(donor).withdraw(0)).to.be.revertedWithCustomError(crowdfunding, "NotCampaignCreator");
+  });
+
+  it("rejects withdraw before deadline even if goal reached", async function () {
+    const connection = await network.connect();
+    const { ethers } = connection;
+    const { crowdfunding, creator, donor } = await deployFixture(connection);
+    const latest = await ethers.provider.getBlock("latest");
+    const deadline = BigInt((latest?.timestamp ?? 0) + 3600);
+    const goal = ethers.parseEther("1");
+
+    await crowdfunding.connect(creator).createCampaign("Early", goal, deadline);
+    await crowdfunding.connect(donor).donate(0, { value: goal });
+
+    await expect(crowdfunding.connect(creator).withdraw(0)).to.be.revertedWithCustomError(crowdfunding, "CampaignStillActive");
   });
 
   it("rejects withdraw when goal is not reached", async function () {
@@ -192,6 +208,7 @@ describe("Crowdfunding", function () {
 
     await crowdfunding.connect(creator).createCampaign("Shortfall", ethers.parseEther("2"), deadline);
     await crowdfunding.connect(donor).donate(0, { value: ethers.parseEther("1") });
+    await increaseTime(connection, 4000);
 
     await expect(crowdfunding.connect(creator).withdraw(0)).to.be.revertedWithCustomError(crowdfunding, "GoalNotReached");
   });
@@ -206,6 +223,7 @@ describe("Crowdfunding", function () {
 
     await crowdfunding.connect(creator).createCampaign("SingleWithdraw", goal, deadline);
     await crowdfunding.connect(donor).donate(0, { value: goal });
+    await increaseTime(connection, 4000);
     await crowdfunding.connect(creator).withdraw(0);
 
     await expect(crowdfunding.connect(creator).withdraw(0)).to.be.revertedWithCustomError(crowdfunding, "AlreadyWithdrawn");
@@ -285,5 +303,121 @@ describe("Crowdfunding", function () {
     );
     await expect(crowdfunding.connect(creator).withdraw(invalidId)).to.be.revertedWithCustomError(crowdfunding, "CampaignNotFound");
     await expect(crowdfunding.connect(donor).refund(invalidId)).to.be.revertedWithCustomError(crowdfunding, "CampaignNotFound");
+  });
+
+  it("sets owner at deployment and allows ownership transfer", async function () {
+    const connection = await network.connect();
+    const { crowdfunding, creator, other } = await deployFixture(connection);
+
+    expect(await crowdfunding.owner()).to.equal(creator.address);
+    await expect(crowdfunding.connect(creator).transferOwnership(other.address))
+      .to.emit(crowdfunding, "OwnershipTransferred")
+      .withArgs(creator.address, other.address);
+    expect(await crowdfunding.owner()).to.equal(other.address);
+  });
+
+  it("rejects ownership transfer by non-owner", async function () {
+    const connection = await network.connect();
+    const { crowdfunding, donor, other } = await deployFixture(connection);
+
+    await expect(crowdfunding.connect(donor).transferOwnership(other.address)).to.be.revertedWithCustomError(crowdfunding, "NotOwner");
+  });
+
+  it("allows owner to recover stuck funds", async function () {
+    const connection = await network.connect();
+    const { ethers } = connection;
+    const { crowdfunding, creator, donor } = await deployFixture(connection);
+
+    await donor.sendTransaction({
+      to: await crowdfunding.getAddress(),
+      value: ethers.parseEther("0.01")
+    });
+
+    await expect(crowdfunding.connect(creator).recoverStuckFunds(creator.address, ethers.parseEther("0.01")))
+      .to.emit(crowdfunding, "StuckFundsRecovered")
+      .withArgs(creator.address, creator.address, ethers.parseEther("0.01"));
+  });
+
+  it("rejects stuck funds recovery by non-owner", async function () {
+    const connection = await network.connect();
+    const { crowdfunding, donor } = await deployFixture(connection);
+
+    await expect(crowdfunding.connect(donor).recoverStuckFunds(donor.address, 1n)).to.be.revertedWithCustomError(crowdfunding, "NotOwner");
+  });
+
+  it("rejects owner recovery of tracked campaign funds", async function () {
+    const connection = await network.connect();
+    const { ethers } = connection;
+    const { crowdfunding, creator, donor } = await deployFixture(connection);
+    const latest = await ethers.provider.getBlock("latest");
+    const deadline = BigInt((latest?.timestamp ?? 0) + 3600);
+
+    await crowdfunding.connect(creator).createCampaign("Tracked", ethers.parseEther("2"), deadline);
+    await crowdfunding.connect(donor).donate(0, { value: ethers.parseEther("0.5") });
+
+    await expect(crowdfunding.connect(creator).recoverStuckFunds(creator.address, ethers.parseEther("0.1"))).to.be.revertedWithCustomError(
+      crowdfunding,
+      "InsufficientRecoverableFunds"
+    );
+  });
+
+  it("allows owner to recover only excess funds beyond tracked balance", async function () {
+    const connection = await network.connect();
+    const { ethers } = connection;
+    const { crowdfunding, creator, donor } = await deployFixture(connection);
+    const latest = await ethers.provider.getBlock("latest");
+    const deadline = BigInt((latest?.timestamp ?? 0) + 3600);
+
+    await crowdfunding.connect(creator).createCampaign("Mix", ethers.parseEther("2"), deadline);
+    await crowdfunding.connect(donor).donate(0, { value: ethers.parseEther("0.5") });
+
+    await donor.sendTransaction({
+      to: await crowdfunding.getAddress(),
+      value: ethers.parseEther("0.02")
+    });
+
+    await expect(crowdfunding.connect(creator).recoverStuckFunds(creator.address, ethers.parseEther("0.02")))
+      .to.emit(crowdfunding, "StuckFundsRecovered")
+      .withArgs(creator.address, creator.address, ethers.parseEther("0.02"));
+
+    await expect(crowdfunding.connect(creator).recoverStuckFunds(creator.address, 1n)).to.be.revertedWithCustomError(
+      crowdfunding,
+      "InsufficientRecoverableFunds"
+    );
+  });
+
+  it("maintains balance invariant: balance >= totalTrackedFunds", async function () {
+    const connection = await network.connect();
+    const { ethers } = connection;
+    const { crowdfunding, creator, donor, other } = await deployFixture(connection);
+    const latest = await ethers.provider.getBlock("latest");
+    const deadline = BigInt((latest?.timestamp ?? 0) + 3600);
+
+    const assertInvariant = async () => {
+      const tracked = await crowdfunding.totalTrackedFunds();
+      const balance = await ethers.provider.getBalance(await crowdfunding.getAddress());
+      expect(balance).to.be.gte(tracked);
+    };
+
+    await assertInvariant();
+
+    await crowdfunding.connect(creator).createCampaign("Inv1", ethers.parseEther("1"), deadline);
+    await assertInvariant();
+
+    await crowdfunding.connect(donor).donate(0, { value: ethers.parseEther("0.4") });
+    await assertInvariant();
+
+    await other.sendTransaction({
+      to: await crowdfunding.getAddress(),
+      value: ethers.parseEther("0.02")
+    });
+    await assertInvariant();
+
+    await increaseTime(connection, 4000);
+    await crowdfunding.connect(donor).refund(0);
+    await assertInvariant();
+
+    await crowdfunding.connect(creator).recoverStuckFunds(creator.address, ethers.parseEther("0.02"));
+    await assertInvariant();
   });
 });

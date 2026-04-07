@@ -7,6 +7,8 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "typecheck": "tsc --noEmit",
+    "check:js": "node --check web/app.js && node --check scripts/deploy-crowdfunding.js && node --check scripts/deploy-local.ts && node --check scripts/demo-local.ts && node --check scripts/serve-crowdfunding-ui.js",
     "node": "hardhat node",
     "hardhat-node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy-local.ts --network localhost",

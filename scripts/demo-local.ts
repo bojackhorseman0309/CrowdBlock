@@ -4,7 +4,7 @@ async function main() {
   const { ethers } = await network.connect();
   const [creator, donor] = await ethers.getSigners();
   const Factory: any = await ethers.getContractFactory("Crowdfunding");
-  const contract = await Factory.deploy();
+  const contract = await Factory.deploy(creator.address);
   await contract.waitForDeployment();
 
   const latest = await ethers.provider.getBlock("latest");
@@ -17,12 +17,16 @@ async function main() {
   const donateTx = await contract.connect(donor).donate(0, { value: goal });
   await donateTx.wait();
 
+  await ethers.provider.send("evm_increaseTime", [4000]);
+  await ethers.provider.send("evm_mine", []);
+
   const withdrawTx = await contract.connect(creator).withdraw(0);
   await withdrawTx.wait();
 
   const campaign = await contract.campaigns(0);
 
   console.log("Contract:", await contract.getAddress());
+  console.log("Owner:", await contract.owner());
   console.log("Creator:", creator.address);
   console.log("Donor:", donor.address);
   console.log("Raised:", ethers.formatEther(campaign.amountRaised), "token nativo");

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -110,6 +110,26 @@
         margin-bottom: 6px;
       }
 
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+
+      .pagination {
+        display: grid;
+        grid-template-columns: 120px 1fr 120px;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .pagination .meta {
+        text-align: center;
+        margin: 0;
+      }
+
       .grid {
         display: grid;
         gap: 16px;
@@ -154,50 +174,93 @@
         padding: 10px;
         font-size: 0.95rem;
       }
+
+      .meta {
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <header class="card">
         <h1>CrowdBlock</h1>
-        <p>Decentralized crowdfunding management with Web3 wallets and campaign tracking.</p>
+        <p>Gestión de crowdfunding descentralizado con MetaMask y contrato en blockchain.</p>
         <div class="row">
-          <button id="connectBtn">Connect MetaMask</button>
-          <button id="switchAmoyBtn" class="secondary">Switch to Amoy</button>
-          <button id="refreshBtn" class="secondary">Refresh</button>
+          <button id="connectBtn">Conectar MetaMask</button>
+          <button id="switchAmoyBtn" class="secondary">Cambiar a Amoy</button>
+          <button id="refreshBtn" class="secondary">Actualizar</button>
         </div>
       </header>
 
       <section class="card">
-        <h2 class="section-title">Wallet & Network</h2>
-        <p><strong>Account:</strong> <span id="account">Not connected</span></p>
-        <p><strong>Network:</strong> <span id="network">Unknown</span></p>
-        <p><strong>Status:</strong> <span id="statusText">Ready</span></p>
+        <h2 class="section-title">Wallet y Red</h2>
+        <p><strong>Cuenta:</strong> <span id="account">No conectada</span></p>
+        <p><strong>Red:</strong> <span id="network">Desconocida</span></p>
+        <p><strong>Estado:</strong> <span id="statusText">Listo</span></p>
       </section>
 
       <section class="card">
-        <h2 class="section-title">Campaign Actions</h2>
+        <h2 class="section-title">Contrato</h2>
+        <div class="row">
+          <input id="contractAddress" placeholder="Dirección del contrato (0x...)" />
+          <button id="loadContractBtn" class="secondary">Cargar contrato</button>
+          <button id="resetUiBtn" class="secondary">Reset UI</button>
+        </div>
+        <p><strong>Owner:</strong> <span id="ownerAddress">No cargado</span></p>
+        <p><strong>Permisos:</strong> <span id="ownerRole">No verificado</span></p>
+        <p class="meta">
+          Si está vacío, se usa una dirección por defecto para local Hardhat. En Amoy se recomienda pegar la dirección desplegada.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Administración (Owner)</h2>
         <div class="grid grid-cols-2">
           <div>
-            <h3>Create Campaign</h3>
-            <div class="form-group"><label for="campaignTitle">Title</label><input id="campaignTitle" placeholder="Campaign title" /></div>
-            <div class="form-group"><label for="campaignGoal">Goal (ETH)</label><input id="campaignGoal" placeholder="e.g., 5" /></div>
-            <div class="form-group"><label for="campaignDeadline">Deadline</label><input type="date" id="campaignDeadline" /></div>
-            <div class="form-group"><label for="campaignDescription">Description</label><textarea id="campaignDescription" placeholder="Describe the campaign"></textarea></div>
-            <button id="createCampaignBtn">Create Campaign</button>
+            <h3>Transferir owner</h3>
+            <div class="form-group"><label for="newOwnerAddress">Nueva dirección owner</label><input id="newOwnerAddress" placeholder="0x..." /></div>
+            <button id="transferOwnerBtn" class="secondary">Transferir owner</button>
+          </div>
+          <div>
+            <h3>Recuperar fondos bloqueados</h3>
+            <div class="form-group"><label for="recoverToAddress">Enviar a</label><input id="recoverToAddress" placeholder="0x..." /></div>
+            <div class="form-group"><label for="recoverAmount">Monto (token nativo)</label><input id="recoverAmount" placeholder="0.01" /></div>
+            <button id="recoverFundsBtn" class="secondary">Recuperar fondos</button>
+          </div>
+        </div>
+        <p class="meta">
+          Estas funciones solo pueden ser ejecutadas por la cuenta owner del contrato.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Acciones de Campaña</h2>
+        <div class="grid grid-cols-2">
+          <div>
+            <h3>Crear Campaña</h3>
+            <div class="form-group"><label for="campaignTitle">Título</label><input id="campaignTitle" placeholder="Título de campaña" /></div>
+            <div class="form-group"><label for="campaignGoal">Meta (token nativo)</label><input id="campaignGoal" placeholder="Ej: 5" /></div>
+            <div class="form-group"><label for="campaignDeadline">Fecha límite</label><input type="date" id="campaignDeadline" /></div>
+            <button id="createCampaignBtn">Crear campaña</button>
           </div>
 
           <div>
-            <h3>Make a Donation</h3>
-            <div class="form-group"><label for="campaignSelector">Select Campaign</label><select id="campaignSelector"><option value="">No campaigns loaded</option></select></div>
-            <div class="form-group"><label for="donationAmount">Amount (ETH)</label><input id="donationAmount" placeholder="0.1" /></div>
-            <button id="makeADonationBtn" class="secondary">Donate</button>
+            <h3>Donar fondos</h3>
+            <div class="form-group"><label for="campaignSelector">Seleccionar campaña</label><select id="campaignSelector"><option value="">No hay campañas cargadas</option></select></div>
+            <div class="form-group"><label for="donationAmount">Monto (token nativo)</label><input id="donationAmount" placeholder="0.1" /></div>
+            <button id="makeADonationBtn" class="secondary">Donar</button>
           </div>
         </div>
       </section>
 
       <section class="card">
-        <h2 class="section-title">Live Campaigns</h2>
+        <h2 class="section-title">Campañas activas</h2>
+        <div class="pagination">
+          <button id="prevPageBtn" class="secondary">Anterior</button>
+          <span id="pageInfo" class="meta">Página 1/1</span>
+          <button id="nextPageBtn" class="secondary">Siguiente</button>
+        </div>
         <div id="campaignList" class="grid"></div>
       </section>
     </div>

@@ -10,7 +10,7 @@ Plataforma descentralizada de crowdfunding para crear campañas, recibir aportes
 
 Las personas donantes envían fondos en **token nativo** directamente al smart contract (**ETH** en Hardhat local y **POL** en Polygon Amoy).  
 El contrato aplica reglas automáticas:
-- La persona creadora puede retirar fondos solo si la campaña alcanzó la meta y no se retiró antes.
+- La persona creadora puede retirar fondos solo si la campaña alcanzó la meta, ya venció el plazo y no se retiró antes.
 - Si la campaña finaliza sin alcanzar la meta, cada donante puede solicitar el reembolso de su aporte.
 
 El objetivo es ofrecer una alternativa de financiamiento colectivo para usuarios reales, con transparencia, trazabilidad e inmutabilidad, sin intermediarios que custodien los fondos (a diferencia de plataformas tradicionales).
@@ -64,6 +64,7 @@ validaciones de permisos y estado del contrato (por ejemplo, quién puede retira
 3. El contrato ejecuta `withdraw(campaignId)`.
 4. Se valida:
    - Quien llama es la persona creadora.
+   - Fecha límite alcanzada.
    - `amountRaised >= goal`.
    - No se retiró antes.
 5. Se marca `withdrawn = true` y se transfieren fondos.
@@ -121,7 +122,19 @@ Estructura base de campaña:
 Estructura de aportes:
 - `contributions[campaignId][donor] => amount`
 
-## 6. Desarrollo de Smart Contracts (Solidity + Hardhat + Red local)
+## 6. Funcionamiento de Owner
+
+El contrato define un `owner` explícito desde el constructor:
+- `constructor(address initialOwner)`
+
+Funciones de administración:
+- `transferOwnership(address newOwner)`: transfiere propiedad del contrato.
+- `recoverStuckFunds(address payable to, uint256 amount)`: permite al owner recuperar fondos bloqueados.
+
+Restricción:
+- Ambas funciones son exclusivas de `owner`.
+
+## 7. Desarrollo de Smart Contracts
 
 ### Estructura implementada para Parte 2
 
@@ -184,36 +197,99 @@ En otra terminal, ejecutar demo local (crear campaña, donar, retirar):
 npm run demo:local
 ```
 
-Output de demo local:
+### Configuración de MetaMask
 
-```
-> crowdblock@1.0.0 demo:local
-> hardhat run scripts/demo-local.ts --network localhost
+#### Red local Hardhat
 
+1. En MetaMask, agregar red manual:
+- Nombre: `Hardhat Local`
+- RPC URL: `http://127.0.0.1:8545`
+- Chain ID: `31337`
+- Símbolo: `ETH`
 
-Contract: 0xdfssfwef
-Creator: 0xwefwefwef
-Donor: 0xwefwefwef
-Raised: 1.0 token nativo
-Withdrawn: true
+2. Importar una cuenta de Hardhat:
+- Ejecutar `npm run node` y copiar una private key de las cuentas impresas.
+- En MetaMask: `Add account` -> `Import account` -> pegar private key.
+
+3. Seleccionar red `Hardhat Local` antes de usar la UI local.
+
+#### Red Amoy
+
+1. Seleccionar `Polygon Amoy (80002)` en MetaMask.
+2. Usar una cuenta con POL de testnet para gas.
+3. Si la transacción falla por gas bajo, subir manualmente:
+- Max priority fee: `30 gwei`
+- Max fee: `80 gwei`
+
+#### Notas para tomar en cuenta
+
+- Si cambias de red en MetaMask, la app recarga automáticamente para evitar errores de provider.
+- Después de conectar wallet, siempre presionar `Cargar contrato` si cambiaste dirección o red.
+- En local, la UI usa una dirección por defecto de Hardhat. En Amoy, puedes usar la dirección por defecto o pegar una nueva dirección desplegada.
+
+## 8. UI Web con MetaMask
+
+1. Levantar blockchain local:
+```bash
+npm run node
 ```
 
-Para el uso del UI usar los siguientes comandos:
->Levantar blockchain local
+2. En otra terminal, desplegar contrato local:
+```bash
+npm run deploy:local
 ```
-yarn run node 
 
-o
+3. En otra terminal, levantar servidor web de la DApp:
+```bash
+npm run ui:crowdfunding
+```
 
-yarn hardhat-node
+4. Abrir en navegador:
+```txt
+http://127.0.0.1:3000
 ```
->En otra terminal, desplegar contrato
-```
-yarn deploy:local
-```
-Importante: Si se crear un contrato nuevo por favor cambiar la constante CONTRACT_ADDRESSES en app.js
 
->Finalmente para correr el UI Server
+5. Flujo de todas las características del UI:
+- Conectar MetaMask.
+- Cargar contrato.
+- Para red local se usa dirección por defecto de Hardhat.
+- Para Amoy, pegar la dirección desplegada en el campo de contrato y presionar `Cargar contrato`.
+- Probar las cuatro operaciones: crear campaña, donar, retirar y reembolsar.
+- Validar sección de administración:
+  - visualizar owner actual
+  - transferir owner (`transferOwnership`)
+  - recuperar fondos bloqueados (`recoverStuckFunds`)
+- Verificar que los botones de administración se habilitan solo cuando la cuenta conectada es owner.
+- Verificar paginación de campañas (`Anterior` / `Siguiente`) cuando hay más de 5 campañas.
+- Revisar lista de donadores por campaña (`getDonators`).
+- Validar mensajes de error (permisos, campaign activa, goal no alcanzada, etc.).
+- Usar botón `Reset UI` para limpiar direcciones almacenadas y reiniciar estado visual.
+
+## 9. Despliegue del contrato en Polygon Amoy
+
+```bash
+npm run amoy:crowdfunding:deploy
 ```
-yarn ui:crowdfunding
+
+El script de despliegue:
+- valida variables de entorno (`AMOY_RPC_URL`, `DEPLOYER_PRIVATE_KEY`)
+- valida que el RPC sea de Amoy (`chainId 80002`)
+- despliega `Crowdfunding`
+- guarda un registro en `deployments/amoy-crowdfunding.json`
+
+## 10. Prueba de la DApp en Amoy
+
+1. Correr servidor de UI:
+```bash
+npm run ui:crowdfunding
 ```
+
+2. Abrir `http://127.0.0.1:3000`
+3. Conectar MetaMask y seleccionar red `Polygon Amoy (80002)`
+4. Cargar contrato (la UI usa dirección por defecto de Amoy, editable si se redepliega)
+5. Validar los flujos:
+- crear campaña
+- donar fondos
+- retirar fondos (si meta alcanzada y deadline vencido)
+- reembolsar (si meta no alcanzada y deadline vencido)
+- funciones de owner (`transferOwnership`, `recoverStuckFunds`)
