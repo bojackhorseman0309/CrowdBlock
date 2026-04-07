@@ -21,27 +21,34 @@ function resolveAccounts(privateKey: string) {
 const amoyRpcUrl = process.env.AMOY_RPC_URL || "";
 const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY || "";
 
+const networks = {
+  hardhat: {
+    type: "edr-simulated" as const,
+    chainId: 31337
+  },
+  localhost: {
+    type: "http" as const,
+    url: "http://127.0.0.1:8545",
+    chainId: 31337,
+    gasPrice: 25000000000,
+    gas: 8000000,
+  }
+};
+
+if (amoyRpcUrl) {
+  Object.assign(networks, {
+    amoy: {
+      type: "http" as const,
+      url: amoyRpcUrl,
+      accounts: resolveAccounts(deployerPrivateKey)
+    }
+  });
+}
+
 const config = defineConfig({
   plugins: [hardhatEthers, hardhatEthersChaiMatchers, hardhatMocha, hardhatNetworkHelpers],
   solidity: "0.8.26",
-  networks: {
-    hardhat: {
-      type: "edr-simulated",
-      chainId: 31337
-    },
-    localhost: {
-      type: "http",
-      url: "http://127.0.0.1:8545",
-      chainId: 31337,
-      gasPrice: 25000000000,
-      gas: 8000000,
-    },
-    amoy: {
-      type: "http",
-      url: amoyRpcUrl || "",
-      accounts: resolveAccounts(deployerPrivateKey)
-    }
-  }
+  networks
 });
 
 export default config;
