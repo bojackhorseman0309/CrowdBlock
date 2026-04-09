@@ -159,12 +159,12 @@ contract Crowdfunding {
     }
 
     function getDonators(uint256 _campaignId) public view returns (address[] memory) {
-        _getCampaign(_campaignId); // validate campaign exists
+        _getCampaign(_campaignId);
         return campaignDonators[_campaignId];
     }
 
     function getCampaigns() public view returns (Campaign[] memory) {
-        Campaign[] memory allCampaigns = new Campaign[](campaignCount); // create a new array of length campaignCount
+        Campaign[] memory allCampaigns = new Campaign[](campaignCount);
         for (uint256 i = 0; i < campaignCount; i++) {
             allCampaigns[i] = campaigns[i];
         }
